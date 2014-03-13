@@ -18,6 +18,7 @@
 @property (weak, nonatomic) IBOutlet MLPAutoCompleteTextField *currentlyActived;
 @property (weak, nonatomic) IBOutlet UIDatePicker *datePicker;
 @property (weak, nonatomic) IBOutlet UIButton *submitButton;
+@property (weak, nonatomic) IBOutlet UIScrollView *scrollView;
 @property (nonatomic, strong) ClosestLocations *closestLocations;
 @property (nonatomic, strong) CLLocationManager *locationManager;
 @end
@@ -31,8 +32,17 @@
     [self hookField:self.fromField];
     [self hookField:self.toField];
     
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWasShown:) name:UIKeyboardDidShowNotification object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWasHidden:) name:UIKeyboardDidHideNotification object:nil];
+    
     [self setupLocationManager];
 	// Do any additional setup after loading the view, typically from a nib.
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)hookField:(MLPAutoCompleteTextField*)field {
@@ -88,5 +98,30 @@
 - (void)textFieldDidChange:(UITextField*)textField {
     [self checkSubmitButton];
 }
+
+- (void)keyboardWasShown:(NSNotification*)aNotification {
+    NSDictionary* info = [aNotification userInfo];
+    CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
+    
+    UIEdgeInsets contentInsets = UIEdgeInsetsMake(0.0, 0.0, kbSize.height, 0.0);
+    self.scrollView.contentInset = contentInsets;
+    self.scrollView.scrollIndicatorInsets = contentInsets;
+    
+    // If active text field is hidden by keyboard, scroll it so it's visible
+    // Your application might not need or want this behavior.
+    CGRect aRect = self.view.frame;
+    aRect.size.height -= kbSize.height;
+    if (!CGRectContainsPoint(aRect, self.currentlyActived.frame.origin) ) {
+        CGPoint scrollPoint = CGPointMake(0.0, self.currentlyActived.frame.origin.y-kbSize.height);
+        [self.scrollView setContentOffset:scrollPoint animated:YES];
+    }
+}
+
+- (void)keyboardWasHidden:(NSNotification*)aNotification {
+    UIEdgeInsets contentInsets = UIEdgeInsetsZero;
+    self.scrollView.contentInset = contentInsets;
+    self.scrollView.scrollIndicatorInsets = contentInsets;
+}
+
 
 @end
